@@ -68,11 +68,11 @@ static struct NetHandle local_new_handle(const bool isServer)
 	return (struct NetHandle)
 	{
 		.socket = INVALID_SOCKET,
-			.readBuffer = isServer ? NULL : malloc(NET_READ_BUFFER_SIZE),
-			.messageBuffer = NULL,
-			.readLen = 0,
-			.messageLen = 0,
-			.isServer = isServer
+		.readBuffer = isServer ? NULL : malloc(NET_READ_BUFFER_SIZE),
+		.messageBuffer = NULL,
+		.readLen = 0,
+		.messageLen = 0,
+		.isServer = isServer
 	};
 }
 
@@ -396,21 +396,22 @@ int32_t Network_check(struct NetHandle* handle)
 	return messageCount;
 }
 
-bool Network_send(const struct NetHandle* handle, const uint8_t* message, const int length)
+bool Network_send(const struct NetHandle* handle, const uint8_t* message, const int length, const uint16_t messageCode)
 {
-	int32_t len = length + sizeof(int32_t);
+	int32_t len = length + sizeof(int32_t) + sizeof(uint16_t);
 	uint8_t* msg = malloc(len);
 	memcpy(msg, &len, sizeof(int32_t));
-	memcpy(msg + sizeof(int32_t), message, len - sizeof(int32_t));
+	memcpy(msg + sizeof(int32_t), &messageCode, sizeof(uint16_t));
+	memcpy(msg + sizeof(int32_t) + sizeof(uint16_t), message, len - sizeof(int32_t) - sizeof(uint16_t));
 	int res = send(handle->socket, (const char*)msg, len, 0);
 	return res >= 0;
 }
 
-bool Network_send_many(const struct NetHandle** handles, const int32_t socketCount, uint8_t* message, int length)
+bool Network_send_many(const struct NetHandle** handles, const int32_t socketCount, uint8_t* message, int length, const uint16_t messageCode)
 {
 	bool success = false;
 	for (int32_t i = 0; i < socketCount; ++i)
-		success = Network_send(*(handles + i), message, length);
+		success = Network_send(*(handles + i), message, length, messageCode);
 	return success;
 }
 
@@ -450,12 +451,19 @@ int32_t Network_message_len(const struct NetHandle* handle)
 	return 0;
 }
 
+uint16_t Network_get_message_code(const struct NetHandle* handle)
+{
+	if (handle->messageBuffer == NULL)
+		return *(uint16_t*)(handle->readBuffer + sizeof(int32_t));
+	return *(uint16_t*)(handle->messageBuffer + sizeof(int32_t));
+}
+
 const uint8_t* Network_get_message(const struct NetHandle* handle)
 {
 	// Don't return the message length (thus + sizeof(int32_t))
 	if (handle->messageBuffer == NULL)
-		return handle->readBuffer + sizeof(int32_t);
-	return handle->messageBuffer + sizeof(int32_t);
+		return handle->readBuffer + sizeof(int32_t) + sizeof(uint16_t);
+	return handle->messageBuffer + sizeof(int32_t) + sizeof(uint16_t);
 }
 
 size_t Network_server_client_count(const struct Server* server)

@@ -10,6 +10,8 @@ struct lttp {
 	struct NetHandle* client;
 	void* requestHandlerState;
 	int(*requestHandler)(struct lttp* lttp, struct NetHandle* client, void* state, const char* request);
+	void* formHandlerState;
+	int(*formHandler)(struct lttp* lttp, struct NetHandle* client, void* state, struct lttpForm* form);
 	void* connectHandlerState;
 	void(*connectHandler)(struct lttp* lttp, struct NetHandle* client, void* state);
 	void* disconnectHandlerState;
@@ -56,6 +58,34 @@ static void local_client_disconnected(void* state, struct NetHandle* client)
 		lttp->disconnectHandler(lttp, client, lttp->disconnectHandlerState);
 }
 
+static void local_process_remote_message(struct lttp* lttp, struct NetHandle* client)
+{
+	// TODO:  Use request struct to get big requests (don't assume message is 1 shot)
+	uint16_t code = Network_get_message_code(client);
+
+	switch (code)
+	{
+		case LTTP_MESSAGE_CODE_TEXT:
+		{
+			const char* msg = (char*)Network_get_message(client);
+			if (lttp->requestHandler != NULL)
+				lttp->requestHandler(lttp, client, lttp->requestHandlerState, (const char*)msg);
+		}
+		break;
+		case LTTP_MESSAGE_CODE_FORM:
+		{
+			const uint8_t* formData = Network_get_message(client);
+			if (lttp->formHandler != NULL)
+			{
+				struct lttpForm* f = lttpForm_from_data(formData);
+				lttp->formHandler(lttp, client, lttp->formHandlerState, f);
+				lttpForm_free(f);
+			}
+		}
+		break;
+	}
+}
+
 struct lttp* lttp_new()
 {
 	struct lttp* lttp = malloc(sizeof(struct lttp));
@@ -94,6 +124,12 @@ void lttp_set_request_handler(struct lttp* lttp, void* state, int(*handler)(stru
 	lttp->requestHandler = handler;
 }
 
+void lttp_set_form_handler(struct lttp* lttp, void* state, int(*handler)(struct lttp* lttp, struct NetHandle* client, void* state, struct lttpForm* form))
+{
+	lttp->formHandlerState = state;
+	lttp->formHandler = handler;
+}
+
 void lttp_set_client_connect_handler(struct lttp* lttp, void* state, void(*handler)(struct lttp* lttp, struct NetHandle* client, void* state))
 {
 	lttp->connectHandlerState = state;
@@ -117,11 +153,10 @@ int lttp_update(struct lttp* lttp)
 			for (size_t i = 0; i < clientCount; ++i)
 			{
 				struct NetHandle* client = Network_get_client(lttp->server, i);
-				// TODO:  Use request struct to get big requests (don't assume message is 1 shot)
-				const char* msg = (char*)Network_get_message(client);
+				if (Network_message_len(client) == 0)
+					continue;
 
-				if (lttp->requestHandler != NULL)
-					lttp->requestHandler(lttp, client, lttp->requestHandlerState, (const char*)msg);
+				local_process_remote_message(lttp, client);
 			}
 		}
 	}
@@ -131,8 +166,7 @@ int lttp_update(struct lttp* lttp)
 		if (msgCount > 0)
 		{
 			lttp->waitingForResponse = false;
-			const uint8_t* msg = Network_get_message(lttp->client);
-			printf("%s\n", (char*)msg);
+			local_process_remote_message(lttp, lttp->client);
 		}
 	}
 	return 0;
@@ -189,18 +223,54 @@ bool lttp_is_waiting(const struct lttp* lttp)
 
 int lttp_send_request(struct lttp* lttp, const char* request)
 {
-	if (!local_is_client(lttp)) return 0;
-	int sentBytes = Network_send(lttp->client, (uint8_t*)request, (int)(strlen(request) + 1));
+	if (!local_is_client(lttp))
+		return 0;
+	int sentBytes = Network_send(lttp->client, (uint8_t*)request, (int)(strlen(request) + 1), LTTP_MESSAGE_CODE_TEXT);
 	if (sentBytes > 0)
+	{
 		lttp->waitingForResponse = true;
-	return 0;
+		return 0;
+	}
+	return LTTP_ERR_FAILED_TO_SEND;
 }
 
 int lttp_send_response(struct lttp* lttp, struct NetHandle* client, const char* response)
 {
-	if (!local_is_server(lttp)) return 0;
-	int sentBytes = Network_send(client, (uint8_t*)response, (int)(strlen(response) + 1));
+	if (!local_is_server(lttp))
+		return 0;
+	int sentBytes = Network_send(client, (uint8_t*)response, (int)(strlen(response) + 1), LTTP_MESSAGE_CODE_TEXT);
 	if (sentBytes > 0)
 		return 0;
-	return LTTP_ERR_FAILED_TO_SEND_RESPONSE;
+	return LTTP_ERR_FAILED_TO_SEND;
+}
+
+int lttp_send_form_request(struct lttp* lttp, struct NetHandle* client, const struct lttpForm* form)
+{
+	if (!local_is_server(lttp))
+		return 0;
+	uint8_t* formData = lttpForm_get_raw(form);
+	if (formData == NULL)
+		return LTTP_ERR_NO_FORM_DATA_TO_SEND;
+	int sentBytes = Network_send(client, formData, (int)lttpForm_get_size(form), LTTP_MESSAGE_CODE_FORM);
+	lttpForm_free_raw(formData);
+	if (sentBytes > 0)
+		return 0;
+	return LTTP_ERR_FAILED_TO_SEND;
+}
+
+int lttp_send_form_response(struct lttp* lttp, const struct lttpForm* form)
+{
+	if (!local_is_client(lttp)) return 0;
+	int32_t len = 0;
+	uint8_t* formData = lttpForm_get_filled(form, &len);
+	if (formData == NULL)
+		return LTTP_ERR_NO_FORM_DATA_TO_SEND;
+	int sentBytes = Network_send(lttp->client, formData, len, LTTP_MESSAGE_CODE_FORM);
+	lttpForm_free_filled(formData);
+	if (sentBytes > 0)
+	{
+		lttp->waitingForResponse = true;
+		return 0;
+	}
+	return LTTP_ERR_FAILED_TO_SEND;
 }
