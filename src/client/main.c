@@ -28,7 +28,7 @@ static int local_form_handler(struct lttp* lttp, struct NetHandle* client, void*
 	int32_t buffSize = 0;
 	for (int32_t i = 0; i < count; ++i)
 	{
-		struct lttpFormField f = lttpForm_get_next(form);
+		struct lttpFormField f = lttpForm_get_next_field(form);
 		int32_t size = max(32, f.size);
 		buffs[i] = malloc(size);
 		printf("%s", f.label);
@@ -146,12 +146,16 @@ static int local_form_handler(struct lttp* lttp, struct NetHandle* client, void*
 	return 0;
 }
 
-int main(void)
+int main(int argc, char** argv)
 {
 	char inputBuffer[INPUT_BUFFER_SIZE];
 
 	struct lttp* lttp = lttp_new();
-	lttp_connect(lttp, LOCAL_HOST);
+	// TODO:  Assuming only argument is the host address, this will change with command line options being added
+	if (argc < 2)
+		lttp_connect(lttp, LOCAL_HOST);
+	else
+		lttp_connect(lttp, argv[1]);
 	lttp_set_request_handler(lttp, NULL, local_message_handler);
 	lttp_set_form_handler(lttp, NULL, local_form_handler);
 
