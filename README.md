@@ -13,7 +13,15 @@ The first byte of the payload holds both the message code and the number of byte
 From the first byte of the message you can get the length of **N** bytes by the following:
 ```c
 // Assuming our uint8_t* network message is named "buff"
-size_t messageLengthByteLength = (size_t)1 << (buff[0] & 0b0111);
+size_t msgLengthSize = (size_t)1 << (buff[0] & 0b0111);
+```
+
+Now you have what you need to read the length of the message to know how many bytes are being sent across the network:
+```c
+// Assuming our uint8_t* network message is named "buff"
+uint64_t msgLen = 0;
+memcpy(&msgLen, buff + 1, msgLengthSize);
+// NOTE:  MAKE SURE you do proper buffer overflow handling, the above code is meant for simplicity to aid understanding
 ```
 
 From the first byte of the message you can get the message type code by the following:
