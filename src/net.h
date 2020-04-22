@@ -28,6 +28,7 @@ uint16_t Network_get_message_code(const struct NetHandle* handle);
 const uint8_t* Network_get_message(const struct NetHandle* handle);
 size_t Network_server_client_count(const struct Server* server);
 struct NetHandle* Network_get_client(struct Server* server, size_t clientIndex);
+int Network_handle_get_id(const struct NetHandle* handle);
 int Network_quit();
 
 #endif
