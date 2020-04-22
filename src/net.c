@@ -117,6 +117,17 @@ static bool local_accept_client(struct Server* server)
 	}
 }
 
+static size_t local_get_byte_len_from_info(const uint8_t* buff)
+{
+	return (size_t)1 << (buff[0] & 0b0111);
+}
+
+//static uint8_t local_get_byte_order_code()
+//{
+//	int16_t word = 0x0001;
+//	return ((&word)[0] ?  1 : 0);
+//}
+
 static int local_read_message(struct NetHandle* handle)
 {
 	if (handle->messageBuffer != NULL && handle->currentMessageLen == handle->messageLen)
@@ -130,9 +141,11 @@ static int local_read_message(struct NetHandle* handle)
 
 	if (handle->messageBuffer == NULL)
 	{
-		if (handle->readLen > (int32_t)sizeof(int32_t))
+		size_t bytes = local_get_byte_len_from_info(handle->readBuffer);
+		if (handle->readLen > (int32_t)(sizeof(uint8_t) + bytes))
 		{
-			handle->messageLen = *(int32_t*)handle->readBuffer;
+			memcpy(&handle->messageLen, handle->readBuffer + sizeof(uint8_t), bytes);
+
 			if (handle->messageLen < NET_READ_BUFFER_SIZE)
 				return 1;
 			else
@@ -396,18 +409,35 @@ int32_t Network_check(struct NetHandle* handle)
 	return messageCount;
 }
 
-bool Network_send(const struct NetHandle* handle, const uint8_t* message, const int length, const uint16_t messageCode)
+bool Network_send(const struct NetHandle* handle, const uint8_t* message, const int length, const uint8_t messageCode)
 {
-	int32_t len = length + sizeof(int32_t) + sizeof(uint16_t);
+	// TODO:  Support splitting of messages (can't send over 32-bit atm)
+	size_t len = length + sizeof(uint8_t);
+
+	// TODO:  Test big-endian and little-endian (local_get_byte_order_code)
+	uint8_t info = messageCode;
+	info <<= 3;
+	if (len + sizeof(uint8_t) <= UINT8_MAX)
+		info |= 0x00;
+	else if (len + sizeof(uint16_t) <= UINT16_MAX)
+		info |= 0x01;
+	else if (len + sizeof(uint32_t) <= UINT32_MAX)
+		info |= 0x02;
+	else
+		info |= 0x03;
+
+	size_t lenLen = (size_t)1 << (info & 0b0111);
+	len += lenLen;
+
 	uint8_t* msg = malloc(len);
-	memcpy(msg, &len, sizeof(int32_t));
-	memcpy(msg + sizeof(int32_t), &messageCode, sizeof(uint16_t));
-	memcpy(msg + sizeof(int32_t) + sizeof(uint16_t), message, len - sizeof(int32_t) - sizeof(uint16_t));
-	int res = send(handle->socket, (const char*)msg, len, 0);
+	memcpy(msg, &info, sizeof(uint8_t));
+	memcpy(msg + sizeof(uint8_t), &len, lenLen);
+	memcpy(msg + sizeof(uint8_t) + lenLen, message, length);
+	int res = send(handle->socket, (const char*)msg, (int)len, 0);
 	return res >= 0;
 }
 
-bool Network_send_many(const struct NetHandle** handles, const int32_t socketCount, uint8_t* message, int length, const uint16_t messageCode)
+bool Network_send_many(const struct NetHandle** handles, const int32_t socketCount, uint8_t* message, int length, const uint8_t messageCode)
 {
 	bool success = false;
 	for (int32_t i = 0; i < socketCount; ++i)
@@ -451,19 +481,23 @@ int32_t Network_message_len(const struct NetHandle* handle)
 	return 0;
 }
 
-uint16_t Network_get_message_code(const struct NetHandle* handle)
+static uint8_t local_get_message_code(const uint8_t* buff)
+{
+	return (buff[0] & 0b11111000) >> 3;
+}
+
+uint8_t Network_get_message_code(const struct NetHandle* handle)
 {
 	if (handle->messageBuffer == NULL)
-		return *(uint16_t*)(handle->readBuffer + sizeof(int32_t));
-	return *(uint16_t*)(handle->messageBuffer + sizeof(int32_t));
+		return local_get_message_code(handle->readBuffer);
+	return local_get_message_code(handle->messageBuffer);
 }
 
 const uint8_t* Network_get_message(const struct NetHandle* handle)
 {
-	// Don't return the message length (thus + sizeof(int32_t))
 	if (handle->messageBuffer == NULL)
-		return handle->readBuffer + sizeof(int32_t) + sizeof(uint16_t);
-	return handle->messageBuffer + sizeof(int32_t) + sizeof(uint16_t);
+		return handle->readBuffer + sizeof(uint8_t) + local_get_byte_len_from_info(handle->readBuffer);
+	return handle->messageBuffer + sizeof(uint8_t) + local_get_byte_len_from_info(handle->messageBuffer);
 }
 
 size_t Network_server_client_count(const struct Server* server)

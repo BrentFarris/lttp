@@ -18,10 +18,12 @@ enum lttpErr {
 	LTTP_ERR_NO_FORM_DATA_TO_SEND = 7,
 };
 
+// bits 0-3 = payload length so if 3 then len = 2^3
 enum lttpMessageCode {
 	LTTP_MESSAGE_CODE_INVALID = 0,
 	LTTP_MESSAGE_CODE_TEXT = 1,
 	LTTP_MESSAGE_CODE_FORM = 2,
+	LTTP_MESSAGE_CODE_FILE = 3,
 };
 
 struct lttp;
