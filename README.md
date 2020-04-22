@@ -8,13 +8,27 @@ A spec complete client is provided [on GitHub](https://github.com/BrentFarris/lt
 A sample LTTP server can be found [on GitHub](https://github.com/BrentFarris/lttp/tree/master/src/server) which shows how to start the server given the base server code implementation. If you are to use this sample code, then you will also need the rest of the code in the same GitHub repository to get started. The code provided in the [LTTP GitHub repository](https://github.com/BrentFarris/lttp) is by no means the only allowed code to host a LTTP server; it is just meant as the most portible and up to date server code implementation.
 
 ## The LTTP specification
+The first byte of the payload holds both the message code and the number of bytes to use for the length of the message. The first 3 bits are used to denote the length in bytes of the payload length, we'll call this **N**. The next 5 bits are used to denote the message type code. The next **N** bytes hold the length of the entire message (including the first info byte discussed).
+
+From the first byte of the message you can get the length of **N** bytes by the following:
+```c
+// Assuming our uint8_t* network message is named "buff"
+size_t messageLengthByteLength = (size_t)1 << (buff[0] & 0b0111);
+```
+
+From the first byte of the message you can get the message type code by the following:
+```c
+// Assuming our uint8_t* network message is named "buff"
+uint8_t typeCode = (buff[0] & 0b11111000) >> 3;
+```
+
 TBD
 
-### Text
+### Text (type code 1)
 TBD
 
-### Form
+### Form (type code 2)
 TBD
 
-### File
+### File (type code 3)
 TBD
