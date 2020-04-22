@@ -21,7 +21,8 @@ Now you have what you need to read the length of the message to know how many by
 // Assuming our uint8_t* network message is named "buff"
 uint64_t msgLen = 0;
 memcpy(&msgLen, buff + 1, msgLengthSize);
-// NOTE:  MAKE SURE you do proper buffer overflow handling, the above code is meant for simplicity to aid understanding
+// NOTE:  MAKE SURE you do proper buffer overflow handling!
+//   The above code is meant for simplicity to aid understanding
 ```
 
 From the first byte of the message you can get the message type code by the following:
