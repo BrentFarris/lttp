@@ -324,7 +324,7 @@ int32_t lttpForm_get_field_count(const struct lttpForm* form)
 	return count;
 }
 
-struct lttpFormField lttpForm_get_next(struct lttpForm* form)
+struct lttpFormField lttpForm_get_next_field(struct lttpForm* form)
 {
 	struct lttpFormField field;
 	field.size = form->read->size;

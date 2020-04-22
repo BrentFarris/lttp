@@ -476,6 +476,11 @@ struct NetHandle* Network_get_client(struct Server* server, size_t clientIndex)
 	return server->clients + clientIndex;
 }
 
+int Network_handle_get_id(const struct NetHandle* handle)
+{
+	return (int)handle->socket;
+}
+
 int Network_quit()
 {
 #ifdef WINDOWS_NETWORKING

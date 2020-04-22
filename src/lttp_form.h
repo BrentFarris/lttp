@@ -45,7 +45,7 @@ bool lttpForm_match(const struct lttpForm* reference, const struct lttpForm* act
 void lttpForm_set_payload(struct lttpForm* form, const uint8_t* payload, int32_t len);
 int32_t lttpForm_get_size(const struct lttpForm* form);
 int32_t lttpForm_get_field_count(const struct lttpForm* form);
-struct lttpFormField lttpForm_get_next(struct lttpForm* form);
+struct lttpFormField lttpForm_get_next_field(struct lttpForm* form);
 const uint8_t* lttpForm_get_payload(struct lttpForm* form);
 
 #endif
