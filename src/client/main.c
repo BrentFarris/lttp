@@ -14,7 +14,7 @@
 #define max(a, b) (a) > (b) ? (a) : (b)
 #endif
 
-static int local_message_handler(struct lttp* lttp, struct NetHandle* client, void* state, const char* msg)
+static int local_text_handler(struct lttp* lttp, struct NetHandle* client, void* state, const char* msg)
 {
 	printf("\n%s\n", msg);
 	return 0;
@@ -156,7 +156,7 @@ int main(int argc, char** argv)
 		lttp_connect(lttp, LOCAL_HOST);
 	else
 		lttp_connect(lttp, argv[1]);
-	lttp_set_request_handler(lttp, NULL, local_message_handler);
+	lttp_set_text_handler(lttp, NULL, local_text_handler);
 	lttp_set_form_handler(lttp, NULL, local_form_handler);
 
 	while (true)

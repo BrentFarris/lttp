@@ -118,7 +118,7 @@ void lttp_set_port(struct lttp* lttp, const uint16_t port)
 		lttp->err = LTTP_ERR_PORT_CHANGE_WHILE_ACTIVE;
 }
 
-void lttp_set_request_handler(struct lttp* lttp, void* state, int(*handler)(struct lttp* lttp, struct NetHandle* client, void* state, const char* request))
+void lttp_set_text_handler(struct lttp* lttp, void* state, int(*handler)(struct lttp* lttp, struct NetHandle* client, void* state, const char* request))
 {
 	lttp->requestHandlerState = state;
 	lttp->requestHandler = handler;

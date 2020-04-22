@@ -18,7 +18,6 @@ enum lttpErr {
 	LTTP_ERR_NO_FORM_DATA_TO_SEND = 7,
 };
 
-// bits 0-3 = payload length so if 3 then len = 2^3
 enum lttpMessageCode {
 	LTTP_MESSAGE_CODE_INVALID = 0,
 	LTTP_MESSAGE_CODE_TEXT = 1,
@@ -32,7 +31,7 @@ struct lttp* lttp_new();
 void lttp_free(struct lttp* lttp);
 int lttp_shutdown(struct lttp* lttp);
 void lttp_set_port(struct lttp* lttp, const uint16_t port);
-void lttp_set_request_handler(struct lttp* lttp, void* state, int(*handler)(struct lttp* lttp, struct NetHandle* client, void* state, const char* request));
+void lttp_set_text_handler(struct lttp* lttp, void* state, int(*handler)(struct lttp* lttp, struct NetHandle* client, void* state, const char* request));
 void lttp_set_form_handler(struct lttp* lttp, void* state, int(*handler)(struct lttp* lttp, struct NetHandle* client, void* state, struct lttpForm* form));
 void lttp_set_client_connect_handler(struct lttp* lttp, void* state, void(*handler)(struct lttp* lttp, struct NetHandle* client, void* state));
 void lttp_set_client_disconnect_handler(struct lttp* lttp, void* state, void(*handler)(struct lttp* lttp, struct NetHandle* client, void* state));
