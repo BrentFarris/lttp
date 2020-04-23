@@ -202,7 +202,7 @@ int lttp_connect(struct lttp* lttp, const char* address)
 	}
 
 	lttp->client = Network_new_client(address, lttp->port);
-	if (local_is_client(lttp))
+	if (!local_is_client(lttp))
 	{
 		lttp->err = LTTP_ERR_FAILED_TO_CREATE_CLIENT;
 		return lttp->err;

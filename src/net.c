@@ -289,7 +289,9 @@ struct NetHandle* Network_new_client(const char* hostAddress, const uint16_t por
 #ifdef WINDOWS_NETWORKING
 		printf("getaddrinfo failed with error: %d\n", WSAGetLastError());
 #endif
-		return handle;
+		free(handle->readBuffer);
+		free(handle);
+		return NULL;
 	}
 
 	bool found = false;
@@ -311,9 +313,10 @@ struct NetHandle* Network_new_client(const char* hostAddress, const uint16_t por
 
 	if (!found)
 	{
-		printf("Failed to connect to the server, errno: %d", errno);
+		printf("Failed to connect to the server, errno: %d\n", errno);
 		free(handle->readBuffer);
-		handle->socket = INVALID_SOCKET;
+		free(handle);
+		return NULL;
 	}
 
 	return handle;

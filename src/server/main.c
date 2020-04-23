@@ -19,17 +19,19 @@ static int local_text_handler(struct lttp* lttp, struct NetHandle* client, void*
 	printf("Client sent the message %s. Let's send it back with a twist!", text);
 
 	const size_t inLen = strlen(text);
-	cosnt szie_t twistLen = strlen(TWIST);
+	const size_t twistLen = strlen(TWIST);
 	char* r = malloc(inLen + twistLen + 1);
 	memcpy(r, text, inLen);
 	memcpy(r + inLen, TWIST, twistLen);
 	r[inLen + twistLen] = '\0';
 	lttp_send_response(lttp, client, r);
+	return 0;
 }
 
 static int local_form_handler(struct lttp* lttp, struct NetHandle* client, void* state, struct lttpForm* form)
 {
 	// TODO:  Show example of sending the client a form
+	return 0;
 }
 
 int main(void)

@@ -1,11 +1,12 @@
 #ifndef LTTP_NETWORK_H
 #define LTTP_NETWORK_H
 
-#define LOCAL_HOST					"127.0.0.1\0"
 
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
+
+#define LOCAL_HOST					"127.0.0.1\0"
 
 struct NetHandle;
 struct Server;
