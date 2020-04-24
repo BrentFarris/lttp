@@ -3,6 +3,11 @@
 
 #include <stdint.h>
 
+struct InputState {
+	struct TextInput* command;
+	struct ClientUI* ui;
+};
+
 void trim(char* str);
 int8_t strtoint8(const char* str);
 uint8_t strtouint8(const char* str);

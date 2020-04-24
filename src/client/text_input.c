@@ -1,4 +1,4 @@
-#include "input.h"
+#include "ui.h"
 #include <string.h>
 #include <memory.h>
 #include <ncurses.h>
@@ -30,13 +30,21 @@ void TextInput_free(struct TextInput* input)
 	free(input);
 }
 
-bool TextInput_read(struct TextInput* input)
+// TODO:  Swap this back to struct TextInput* input when proper key handling is done
+bool TextInput_read(struct InputState* state)
 {
+	struct TextInput* input = state->command;
 	int c = getch();
 	if (c != ERR)
 	{
 		switch (c)
 		{
+			case 339:		/* page up */
+				UI_page_prev(state->ui);
+				break;
+			case 338:		/* page down */
+				UI_page_next(state->ui);
+				break;
 			case 525:		/* ctrl + down arrow */
 			case KEY_DOWN:
 				// down
@@ -85,7 +93,7 @@ bool TextInput_read(struct TextInput* input)
 			case 560:		/* ctrl + right arrow */
 				if (input->writeIndex < input->endIndex)
 				{
-					for (int32_t i = input->writeIndex + 1; i <= input->endIndex; ++i)
+					for (size_t i = input->writeIndex + 1; i <= input->endIndex; ++i)
 					{
 						if (i == input->endIndex || input->buffer[i - 1] == ' ')
 						{
