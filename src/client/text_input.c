@@ -57,8 +57,14 @@ bool TextInput_read(struct TextInput* input)
 						{
 							volatile int x, y, rows, cols;
 							getyx(stdscr, y, x);
-							int32_t diff = input->writeIndex - i;
-							move(y - (diff / cols), x - (diff % cols));
+							getmaxyx(stdscr, rows, cols);
+							x -= input->writeIndex - i;
+							while (x < 0)
+							{
+								x += cols - 1;
+								y--;
+							}
+							move(y, x % cols);
 							input->writeIndex = i;
 							break;
 						}
@@ -88,8 +94,14 @@ bool TextInput_read(struct TextInput* input)
 						{
 							volatile int x, y, rows, cols;
 							getyx(stdscr, y, x);
-							int32_t diff = i - input->writeIndex;
-							move(y + (diff / cols), x + (diff % cols));
+							getmaxyx(stdscr, rows, cols);
+							x += i - input->writeIndex;
+							while (x > cols)
+							{
+								x -= cols - 1;
+								y++;
+							}
+							move(y, x);
 							input->writeIndex = i;
 							break;
 						}
