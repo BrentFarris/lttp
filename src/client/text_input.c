@@ -1,12 +1,15 @@
 #include "input.h"
 #include <string.h>
+#include <memory.h>
 #include <ncurses.h>
 #include "text_input.h"
 
 struct TextInput {
 	char* buffer;
 	size_t maxLen;
-	size_t index;
+	size_t endIndex;
+	size_t writeIndex;
+	int32_t lines;
 };
 
 struct TextInput* TextInput_new(const size_t len)
@@ -14,8 +17,10 @@ struct TextInput* TextInput_new(const size_t len)
 	struct TextInput* ti = malloc(sizeof(struct TextInput));
 	ti->buffer = malloc(len);
 	ti->maxLen = len;
-	ti->index = 0;
+	ti->endIndex = 0;
+	ti->writeIndex = 0;
 	ti->buffer[0] = '\0';
+	ti->lines = 0;
 	return ti;
 }
 
@@ -27,35 +32,144 @@ void TextInput_free(struct TextInput* input)
 
 bool TextInput_read(struct TextInput* input)
 {
-	char c = getch();
+	int c = getch();
 	if (c != ERR)
 	{
 		// A key was pressed
 
 		// Send the message to the server
-		if (c == '\n')
+		switch (c)
 		{
-			input->buffer[input->index] = '\0';
-			input->index = 0;
-			trim(input->buffer);
-			return true;
-		}
-		else if (c == '\a')
-		{
-			if (input->index > 0)
-			{
-				int x, y;
-				getyx(stdscr, y, x);
-				mvdelch(y, x - 1);
-				if (input->index > 0)
-					input->buffer[--input->index] = '\0';
-			}
-		}
-		else if (input->index < input->maxLen - 1)
-		{
-			input->buffer[input->index++] = c;
-			input->buffer[input->index] = '\0';
-			printw("%c", c);
+			case 525:		/* ctrl + down arrow */
+			case KEY_DOWN:
+				// down
+				break;
+			case 566:		/* ctrl + up arrow */
+			case KEY_UP:
+				// up
+				break;
+			case 545:		/* ctrl + left arrow */
+				if (input->writeIndex > 0)
+				{
+					for (int32_t i = input->writeIndex - 1; i >= 0; --i)
+					{
+						if (i == 0 || input->buffer[i - 1] == ' ')
+						{
+							volatile int x, y, rows, cols;
+							getyx(stdscr, y, x);
+							int32_t diff = input->writeIndex - i;
+							move(y - (diff / cols), x - (diff % cols));
+							input->writeIndex = i;
+							break;
+						}
+					}
+				}
+				break;
+			case KEY_LEFT:
+				if (input->writeIndex > 0)
+				{
+					volatile int x, y, rows, cols;
+					getyx(stdscr, y, x);
+					getmaxyx(stdscr, rows, cols);
+
+					input->writeIndex--;
+					if (x == 0)
+						move(y - 1, cols - 1);
+					else
+						move(y, x - 1);
+				}
+				break;
+			case 560:		/* ctrl + right arrow */
+				if (input->writeIndex < input->endIndex)
+				{
+					for (int32_t i = input->writeIndex + 1; i <= input->endIndex; ++i)
+					{
+						if (i == input->endIndex || input->buffer[i - 1] == ' ')
+						{
+							volatile int x, y, rows, cols;
+							getyx(stdscr, y, x);
+							int32_t diff = i - input->writeIndex;
+							move(y + (diff / cols), x + (diff % cols));
+							input->writeIndex = i;
+							break;
+						}
+					}
+				}
+				break;
+			case KEY_RIGHT:
+				if (input->writeIndex < input->endIndex)
+				{
+					volatile int x, y, rows, cols;
+					getyx(stdscr, y, x);
+					getmaxyx(stdscr, rows, cols);
+
+					input->writeIndex++;
+					if (x == cols - 1)
+						move(y + 1, 0);
+					else
+						move(y, x + 1);
+				}
+				break;
+			case 10:	/* return key */
+				input->buffer[input->endIndex] = '\0';
+				input->endIndex = 0;
+				input->writeIndex = 0;
+				trim(input->buffer);
+				return true;
+			case 8:		/* ctrl + delete */
+			case KEY_BACKSPACE:
+				if (input->writeIndex > 0)
+				{
+					volatile int x, y;
+					getyx(stdscr, y, x);
+					if (x > 0)
+						mvdelch(y, x - 1);
+					else
+					{
+						volatile int rows, cols;
+						getmaxyx(stdscr, rows, cols);
+						mvdelch(y - 1, cols - 2);
+
+						move(y - (input->lines + 1), 0);
+						input->lines--;
+						insertln();
+						move(rows - 1, cols - 2);
+					}
+					if (input->endIndex > 0)
+					{
+						if (input->writeIndex != input->endIndex)
+							memcpy(input->buffer + input->writeIndex - 1, input->buffer + input->writeIndex, input->endIndex - input->writeIndex);
+						input->buffer[--input->endIndex] = '\0';
+						input->writeIndex--;
+					}
+				}
+				break;
+			default:
+				if (input->endIndex < input->maxLen - 1)
+				{
+					const size_t ewDiff = input->endIndex - input->writeIndex;
+					if (input->writeIndex != input->endIndex)
+						memcpy(input->buffer + input->writeIndex + 1, input->buffer + input->writeIndex, ewDiff);
+					input->buffer[input->writeIndex] = c;
+					input->buffer[++input->endIndex] = '\0';
+					printw("%s", input->buffer + input->writeIndex);
+					input->writeIndex++;
+
+					volatile int x, y, rows, cols;
+					getyx(stdscr, y, x);
+					getmaxyx(stdscr, rows, cols);
+					if (ewDiff > 0)
+						move(y - (ewDiff / cols), x - (ewDiff % cols));
+					
+					if (y == rows - 1 && x == cols - 1)
+					{
+						input->lines++;
+						move(rows - (input->lines + 2), 0);
+						deleteln();
+						move(rows - 1, 0);
+					}
+				}
+				break;
 		}
 		refresh();
 	}

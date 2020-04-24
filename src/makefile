@@ -17,6 +17,7 @@ SRC_CLIENT	= $(wildcard *.c) \
 # Compilation options
 #CFLAGS  = -O2 -g -W -Wall -Wno-unused-parameter -Wbad-function-cast -fPIC -std=c11
 CFLAGS  = -O2 -g -W -Wall -Wno-unused-parameter -Wbad-function-cast -fPIC -std=gnu11
+#CFLAGS  = -O0 -g -W -Wall -Wno-unused-parameter -Wbad-function-cast -fPIC -std=gnu11
 
 # How to compile individual object files
 OBJS	= $(SRC_CLIENT:.c=.o)

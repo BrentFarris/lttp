@@ -4,6 +4,13 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#ifndef min
+#define min(a, b) (a) < (b) ? (a) : (b)
+#endif
+#ifndef max
+#define max(a, b) (a) > (b) ? (a) : (b)
+#endif
+
 #define DEFAULT_MAX_STRING_LENGTH	256
 
 enum lttpFormInputType {

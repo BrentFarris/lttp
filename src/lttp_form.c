@@ -2,13 +2,6 @@
 #include <string.h>
 #include "lttp_form.h"
 
-#ifndef min
-#define min(a, b) (a) < (b) ? (a) : (b)
-#endif
-#ifndef max
-#define max(a, b) (a) > (b) ? (a) : (b)
-#endif
-
 struct lttpFormEntry {
 	struct lttpFormEntry* next;
 	char* label;
