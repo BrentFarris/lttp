@@ -12,5 +12,6 @@ int32_t strtoint32(const char* str);
 uint32_t strtouint32(const char* str);
 int64_t strtoint64(const char* str);
 uint64_t strtouint64(const char* str);
+int32_t stridxof(const char* haystack, const char* needle, const int32_t offset);
 
 #endif

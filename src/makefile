@@ -7,9 +7,10 @@ INCLUDES := -I./
 
 LIBS := -ldl \
 	-lm \
-	-lpthread
+	-lpthread \
+	-lncurses
 
-SONAME	= client.so
+SONAME	= lttp
 SRC_CLIENT	= $(wildcard *.c) \
 	  $(wildcard ./client/*.c)
 

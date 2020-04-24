@@ -178,3 +178,30 @@ uint64_t strtouint64(const char* str)
 {
 	return strtoull(str, NULL, 10);
 }
+
+int32_t stridxof(const char* haystack, const char* needle, const int32_t offset)
+{
+	int32_t h, n = -1, hLen = (int32_t)strlen((const char*)haystack);
+	if (hLen == 0) return -1;
+	int32_t nLen = (int32_t)strlen((const char*)needle);
+
+	if (nLen > hLen || !hLen || !nLen)
+		return -1;
+
+	for (h = offset; h < hLen; ++h)
+	{
+		if (n == nLen)
+			break;
+
+		for (n = 0; n < nLen; ++n)
+		{
+			if (haystack[h + n] != needle[n])
+				break;
+		}
+	}
+
+	if (n == nLen)
+		return h - 1;
+
+	return -1;
+}
