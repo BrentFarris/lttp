@@ -35,9 +35,6 @@ bool TextInput_read(struct TextInput* input)
 	int c = getch();
 	if (c != ERR)
 	{
-		// A key was pressed
-
-		// Send the message to the server
 		switch (c)
 		{
 			case 525:		/* ctrl + down arrow */

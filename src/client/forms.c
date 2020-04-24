@@ -12,13 +12,17 @@ int Forms_handler(struct lttp* lttp, struct NetHandle* client, void* state, stru
 	int32_t* types = malloc(sizeof(int32_t) * count);
 	int32_t buffSize = 0;
 	clear();
-	UI_print_wrap("The server has sent a form for you to fill out.\0");
+	move(0, 0);
+
+	UI_print_wrap("The server has sent a form for you to fill out.\n\0");
 	for (int32_t i = 0; i < count; ++i)
 	{
 		struct lttpFormField f = lttpForm_get_next_field(form);
 		int32_t size = max(32, f.size);
 		buffs[i] = TextInput_new(size);
-		UI_print_command_prompt(command, f.label, ": \0");
+		UI_print_wrap(f.label);
+		UI_print_wrap("?\0");
+		UI_print_command_prompt(command, ">\0", " \0");
 		refresh();
 		while (!TextInput_read(buffs[i]))
 		{
@@ -30,6 +34,7 @@ int Forms_handler(struct lttp* lttp, struct NetHandle* client, void* state, stru
 			buffSize += f.size;
 		types[i] = f.type;
 		move(i + 1, 0);
+		clrtoeol();
 		UI_print_wrap(f.label);
 		UI_print_wrap(": \0");
 		UI_print_wrap(TextInput_get_buffer(buffs[i]));
