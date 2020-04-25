@@ -3,42 +3,29 @@
 #include <string.h>
 #include <ncurses.h>
 
+/************************************************************************/
+/************************************************************************/
+/* Pagination                                                           */
+/************************************************************************/
+/************************************************************************/
 struct PageBuffer {
 	char* buffer;
 	struct PageBuffer* next;
 	struct PageBuffer* prev;
 };
 
-struct ClientUI {
+struct PageBook {
 	struct PageBuffer* head;
 	struct PageBuffer* tail;
 	struct PageBuffer* currentPage;
 	int32_t currentPageIndex;
 	int32_t pages;
-	int32_t rows;
-	int32_t cols;
-	int writeX;
-	int writeY;
+	int32_t writeIndex;
 };
 
-static void local_reset_ui(struct ClientUI* ui)
+static void local_clear_book(struct PageBook* book)
 {
-	ui->writeX = 0;
-	ui->writeY = 0;
-	ui->pages = 1;
-	ui->head = malloc(sizeof(struct PageBuffer));
-	ui->head->next = NULL;
-	ui->head->prev = NULL;
-	ui->tail = ui->head;
-	ui->currentPage = ui->tail;
-	ui->currentPageIndex = 1;
-	ui->head->buffer = malloc(ui->rows * ui->cols);
-	ui->head->buffer[0] = '\0';
-}
-
-static void local_free_pages(struct PageBuffer* head)
-{
-	struct PageBuffer* pb = head;
+	struct PageBuffer* pb = book->head;
 	while (pb != NULL)
 	{
 		free(pb->buffer);
@@ -48,34 +35,35 @@ static void local_free_pages(struct PageBuffer* head)
 	}
 }
 
-struct ClientUI* UI_new()
-{
-	struct ClientUI* ui = calloc(1, sizeof(struct ClientUI));
-	local_reset_ui(ui);
-	return ui;
-}
-
-void UI_free(struct ClientUI* ui)
-{
-	local_free_pages(ui->head);
-	free(ui);
-}
-
-void UI_print_wrap(struct ClientUI* ui, const char* text)
+static void local_print_page(struct PageBuffer* page)
 {
 	volatile int fromX, fromY;
 	getyx(stdscr, fromY, fromX);
+	move(0, 0);
+	printw("%s", page->buffer);
+	move(fromY, fromX);
+}
 
-	// TODO:  If the row is on top of the input area, then paginate
-	move(ui->writeY, ui->writeX);
+static void local_add_page_to_book(struct PageBook* book, const int32_t size)
+{
+	book->tail->buffer[book->writeIndex] = '\0';
+	book->writeIndex = 0;
+	book->tail->next = malloc(sizeof(struct PageBuffer));
+	book->tail->next->buffer = malloc(size);
+	book->tail->next->prev = book->tail;
+	book->tail = book->tail->next;
+	book->pages++;
+}
+
+static void local_add_to_book(struct PageBook* book, const char* text,
+	const int32_t rows, const int32_t cols)
+{
 	int currentRows = 0;
 	const int32_t printLen = (int32_t)strlen(text);
 	int32_t nextSpace = stridxof(text, " \0", 0);
-	int32_t lineOffset = ui->writeY * ui->cols + ui->writeX;
-	int32_t writeOffset = strlen(ui->tail->buffer);
-	const int32_t bufferSize = ui->rows * ui->cols;
-	int32_t i;
-	for (i = 0; i < printLen; ++i)
+	int32_t lineOffset = book->writeIndex;
+	const int32_t bufferSize = rows * cols;
+	for (int32_t i = 0; i < printLen; ++i)
 	{
 		char c = text[i];
 		if (c == '\n')
@@ -87,44 +75,77 @@ void UI_print_wrap(struct ClientUI* ui, const char* text)
 		{
 			int32_t lastSpace = nextSpace;
 			nextSpace = stridxof(text, " \0", i + 1);
-			if (nextSpace > 0 && nextSpace - lineOffset > ui->cols)
+			if (nextSpace > 0 && nextSpace - lineOffset > cols)
 			{
 				lineOffset = lastSpace + 1;
 				currentRows++;
 				c = '\n';
 			}
 		}
-
-		if (i == bufferSize - 1 || currentRows == ui->rows)
+		if (i == bufferSize - 1 || currentRows == rows)
 		{
-			ui->tail->buffer[writeOffset] = '\0';
-			writeOffset = 0;
-			ui->tail->next = malloc(sizeof(struct PageBuffer));
-			ui->tail->next->buffer = malloc(bufferSize);
-			ui->tail->next->prev = ui->tail;
-			ui->tail = ui->tail->next;
-			ui->pages++;
+			local_add_page_to_book(book, rows * cols);
 			currentRows = 0;
 			if (c != '\n')
 				nextSpace = stridxof(text, " \0", i + 1);
 		}
 		else
-			ui->tail->buffer[writeOffset++] = c;
+			book->tail->buffer[book->writeIndex++] = c;
 	}
-	ui->tail->buffer[writeOffset] = '\0';
+	book->tail->buffer[book->writeIndex] = '\0';
+}
 
-	move(0, 0);
-	printw("%s", ui->currentPage->buffer);
-	getyx(stdscr, ui->writeY, ui->writeX);
+static void local_reset_book(struct PageBook* book, const int32_t pageSize)
+{
+	book->pages = 1;
+	book->head = malloc(sizeof(struct PageBuffer));
+	book->head->next = NULL;
+	book->head->prev = NULL;
+	book->tail = book->head;
+	book->currentPage = book->tail;
+	book->currentPageIndex = 1;
+	book->head->buffer = malloc(pageSize);
+	book->head->buffer[0] = '\0';
+	book->writeIndex = 0;
+}
 
-	move(ui->rows, 0);
-	clrtoeol();
-	for (int32_t i = 0; i < ui->cols; ++i)
-		addch('=');
-	move(ui->rows, 3);
-	printw(" Page %d of %d (page up/down = navigate) ", ui->currentPageIndex, ui->pages);
+/************************************************************************/
+/************************************************************************/
+/* User interface API                                                   */
+/************************************************************************/
+/************************************************************************/
+struct ClientUI {
+	struct PageBook* book;
+	int32_t rows;
+	int32_t cols;
+	int writeX;
+	int writeY;
+};
+static void local_print_info_bar(const struct ClientUI* ui);
+static void local_clear_page_space(const struct ClientUI* ui);
+
+struct ClientUI* UI_new()
+{
+	struct ClientUI* ui = calloc(1, sizeof(struct ClientUI));
+	ui->book = malloc(sizeof(struct PageBook));
+	return ui;
+}
+
+void UI_free(struct ClientUI* ui)
+{
+	local_clear_book(ui->book);
+	free(ui->book);
+	free(ui);
+}
+
+void UI_print_wrap(struct ClientUI* ui, const char* text)
+{
+	volatile int fromX, fromY;
+	getyx(stdscr, fromY, fromX);
+	local_add_to_book(ui->book, text, ui->rows, ui->cols);
+	local_print_page(ui->book->currentPage);
+	local_print_info_bar(ui);
 	move(fromY, fromX);
-	refresh();
 }
 
 void UI_print_command_prompt(struct ClientUI* ui, struct TextInput* command, const char* prefix, const char* separator)
@@ -136,7 +157,6 @@ void UI_print_command_prompt(struct ClientUI* ui, struct TextInput* command, con
 		move(ui->rows + 1, 0);
 		clrtoeol();
 	}
-
 	move(ui->rows + 1, 0);
 	printw("%s%s%s", prefix, separator, TextInput_get_buffer(command));
 	refresh();
@@ -145,27 +165,15 @@ void UI_print_command_prompt(struct ClientUI* ui, struct TextInput* command, con
 void UI_page_next(struct ClientUI* ui)
 {
 	// TODO:  Fix copy/paste
-	if (ui->currentPage->next == NULL)
+	if (ui->book->currentPage->next == NULL)
 		return;
 	int fromX, fromY;
 	getyx(stdscr, fromY, fromX);
-	for (int32_t i = 0; i < ui->rows; ++i)
-	{
-		move(i, 0);
-		clrtoeol();
-	}
-	move(0, 0);
-	ui->currentPage = ui->currentPage->next;
-	printw("%s", ui->currentPage->buffer);
-	ui->currentPageIndex++;
-
-	move(ui->rows, 0);
-	clrtoeol();
-	for (int32_t i = 0; i < ui->cols; ++i)
-		addch('=');
-	getyx(stdscr, ui->writeY, ui->writeX);
-	move(ui->rows, 3);
-	printw(" Page %d of %d (page up/down = navigate) ", ui->currentPageIndex, ui->pages);
+	local_clear_page_space(ui);
+	ui->book->currentPage = ui->book->currentPage->next;
+	ui->book->currentPageIndex++;
+	local_print_page(ui->book->currentPage);
+	local_print_info_bar(ui);
 	move(fromY, fromX);
 	refresh();
 }
@@ -173,37 +181,25 @@ void UI_page_next(struct ClientUI* ui)
 void UI_page_prev(struct ClientUI* ui)
 {
 	// TODO:  Fix copy/paste
-	if (ui->currentPage->prev == NULL)
+	if (ui->book->currentPage->prev == NULL)
 		return;
 	int fromX, fromY;
 	getyx(stdscr, fromY, fromX);
-	for (int32_t i = 0; i < ui->rows; ++i)
-	{
-		move(i, 0);
-		clrtoeol();
-	}
-	move(0, 0);
-	ui->currentPage = ui->currentPage->prev;
-	printw("%s", ui->currentPage->buffer);
-	ui->currentPageIndex--;
-
-	move(ui->rows, 0);
-	clrtoeol();
-	for (int32_t i = 0; i < ui->cols; ++i)
-		addch('=');
-	getyx(stdscr, ui->writeY, ui->writeX);
-	move(ui->rows, 3);
-	printw(" Page %d of %d (page up/down = navigate) ", ui->currentPageIndex, ui->pages);
+	local_clear_page_space(ui);
+	ui->book->currentPage = ui->book->currentPage->prev;
+	ui->book->currentPageIndex--;
+	local_print_page(ui->book->currentPage);
+	local_print_info_bar(ui);
 	move(fromY, fromX);
 	refresh();
 }
 
 void UI_clear_and_print(struct ClientUI* ui, const char* text)
 {
-	local_free_pages(ui->head);
+	local_clear_book(ui->book);
 	clear();
 	move(0, 0);
-	local_reset_ui(ui);
+	local_reset_book(ui->book, ui->rows * ui->cols);
 	UI_print_wrap(ui, text);
 }
 
@@ -215,4 +211,27 @@ void UI_input_area_adjusted(struct ClientUI* ui, const size_t inputRows)
 	ui->cols = cols;
 
 	// TODO:  Re-adjust pages count if needed
+	local_reset_book(ui->book, ui->rows * ui->cols);
+}
+
+static void local_print_info_bar(const struct ClientUI* ui)
+{
+	volatile int fromX, fromY;
+	getyx(stdscr, fromY, fromX);
+	move(ui->rows, 0);
+	clrtoeol();
+	for (int32_t i = 0; i < ui->cols; ++i)
+		addch('=');
+	move(ui->rows, 3);
+	printw(" Page %d of %d (page up/down = navigate) ", ui->book->currentPageIndex, ui->book->pages);
+	move(fromY, fromX);
+}
+
+static void local_clear_page_space(const struct ClientUI* ui)
+{
+	for (int32_t i = 0; i < ui->rows; ++i)
+	{
+		move(i, 0);
+		clrtoeol();
+	}
 }

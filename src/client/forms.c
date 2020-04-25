@@ -21,6 +21,8 @@ int Forms_handler(struct lttp* lttp, struct NetHandle* client, void* state, stru
 		int32_t size = max(32, f.size);
 		buffs[i] = TextInput_new(size);
 		UI_print_wrap(s->ui, f.label);
+		if (f.type == LTTP_FORM_INPUT_TYPE_BOOL)
+			UI_print_wrap(s->ui, " (yes/no)\0");
 		UI_print_wrap(s->ui, "?\0");
 		UI_print_command_prompt(s->ui, s->command, ">\0", " \0");
 		refresh();
@@ -36,11 +38,9 @@ int Forms_handler(struct lttp* lttp, struct NetHandle* client, void* state, stru
 		else
 			buffSize += f.size;
 		types[i] = f.type;
-		move(i + 1, 0);
-		clrtoeol();
-		UI_print_wrap(s->ui, f.label);
-		UI_print_wrap(s->ui, ": \0");
+		UI_print_wrap(s->ui, " => \0");
 		UI_print_wrap(s->ui, TextInput_get_buffer(buffs[i]));
+		UI_print_wrap(s->ui, "\n\0");
 	}
 
 	UI_print_command_prompt(s->ui, s->command, ">\0", " \0");
@@ -64,7 +64,10 @@ int Forms_handler(struct lttp* lttp, struct NetHandle* client, void* state, stru
 				buffer[writeOffset++] = buff[0];
 				break;
 			case LTTP_FORM_INPUT_TYPE_BOOL:
-				buffer[writeOffset++] = buff == 0 ? 0 : 1;
+				if (buff[0] == '1' || buff[0] == 'y')
+					buffer[writeOffset++] = 1;
+				else
+					buffer[writeOffset++] = 0;
 				break;
 			case LTTP_FORM_INPUT_TYPE_FLOAT:
 			{
