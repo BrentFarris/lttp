@@ -3,7 +3,7 @@
 # make all   -> clean and compile
 CC = gcc
 
-INCLUDES := -I./
+INCLUDES := -I./src
 
 LIBS := -ldl \
 	-lm \
@@ -11,13 +11,13 @@ LIBS := -ldl \
 	-lncurses
 
 SONAME	= lttp
-SRC_CLIENT	= $(wildcard *.c) \
-	  $(wildcard ./client/*.c)
+SRC_CLIENT	= $(wildcard ./src/*.c) \
+	  $(wildcard ./src/client/*.c)
 
 # Compilation options
 #CFLAGS  = -O2 -g -W -Wall -Wno-unused-parameter -Wbad-function-cast -fPIC -std=c11
-CFLAGS  = -O2 -g -W -Wall -Wno-unused-parameter -Wbad-function-cast -fPIC -std=gnu11
-#CFLAGS  = -O0 -g -W -Wall -Wno-unused-parameter -Wbad-function-cast -fPIC -std=gnu11
+#CFLAGS  = -O2 -g -W -Wall -Wno-unused-parameter -Wbad-function-cast -fPIC -std=gnu11
+CFLAGS = -O0 -g -W -Wall -Wbad-function-cast -fPIC -std=gnu11
 
 # How to compile individual object files
 OBJS	= $(SRC_CLIENT:.c=.o)

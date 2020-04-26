@@ -202,9 +202,8 @@ void Network_server_set_disconnect_handler(struct Server* server, void* state, v
 
 struct Server* Network_new_server(const char* bindingAddress, const uint16_t bindingPort, const int32_t maxClientCount)
 {
-	struct Server* server = malloc(sizeof(struct Server));
+	struct Server* server = calloc(1, sizeof(struct Server));
 	server->handle = local_new_handle(true);
-	server->clientCount = 0;
 	server->maxClientCount = maxClientCount;
 	server->clients = calloc(maxClientCount, sizeof(struct NetHandle));
 
@@ -267,7 +266,7 @@ struct NetHandle* Network_get_server_handle(struct Server* server)
 
 struct NetHandle* Network_new_client(const char* hostAddress, const uint16_t port)
 {
-	struct NetHandle* handle = malloc(sizeof(struct NetHandle));
+	struct NetHandle* handle = calloc(1, sizeof(struct NetHandle));
 	*handle = local_new_handle(false);
 
 	struct addrinfo hints;

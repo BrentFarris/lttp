@@ -14,13 +14,10 @@ struct TextInput {
 
 struct TextInput* TextInput_new(const size_t len)
 {
-	struct TextInput* ti = malloc(sizeof(struct TextInput));
+	struct TextInput* ti = calloc(1, sizeof(struct TextInput));
 	ti->buffer = malloc(len);
-	ti->maxLen = len;
-	ti->endIndex = 0;
-	ti->writeIndex = 0;
 	ti->buffer[0] = '\0';
-	ti->lines = 0;
+	ti->maxLen = len;
 	return ti;
 }
 

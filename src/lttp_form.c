@@ -22,8 +22,7 @@ struct lttpForm {
 
 static struct lttpFormEntry* local_create_entry()
 {
-	struct lttpFormEntry* e = malloc(sizeof(struct lttpFormEntry));
-	memset(e, 0, sizeof(struct lttpFormEntry));
+	struct lttpFormEntry* e = calloc(1, sizeof(struct lttpFormEntry));
 	return e;
 }
 
@@ -47,12 +46,9 @@ static void local_add_next(struct lttpForm* form, const char* label)
 
 struct lttpForm* lttpForm_new()
 {
-	struct lttpForm* form = malloc(sizeof(struct lttpForm));
+	struct lttpForm* form = calloc(1, sizeof(struct lttpForm));
 	form->head = local_create_entry();
 	form->tail = form->head;
-	form->read = NULL;
-	form->payload = NULL;
-	form->payloadSize = 0;
 	form->size = sizeof(int32_t) + sizeof(int32_t);			// Include full size and description size
 	form->responseMaxSize = form->size;
 	return form;

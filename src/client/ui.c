@@ -1,6 +1,7 @@
 #include "ui.h"
 #include "input.h"
 #include <string.h>
+#include <assert.h>
 #include <ncurses.h>
 
 /************************************************************************/
@@ -33,6 +34,9 @@ static void local_clear_book(struct PageBook* book)
 		pb = pb->next;
 		free(c);
 	}
+	book->head = NULL;
+	book->tail = NULL;
+	book->currentPage = NULL;
 }
 
 static void local_print_page(struct PageBuffer* page)
@@ -48,7 +52,7 @@ static void local_add_page_to_book(struct PageBook* book, const int32_t size)
 {
 	book->tail->buffer[book->writeIndex] = '\0';
 	book->writeIndex = 0;
-	book->tail->next = malloc(sizeof(struct PageBuffer));
+	book->tail->next = calloc(1, sizeof(struct PageBuffer));
 	book->tail->next->buffer = malloc(size);
 	book->tail->next->prev = book->tail;
 	book->tail = book->tail->next;
@@ -63,7 +67,7 @@ static void local_add_to_book(struct PageBook* book, const char* text,
 	int32_t nextSpace = stridxof(text, " \0", 0);
 	int32_t lineOffset = book->writeIndex;
 	const int32_t bufferSize = rows * cols;
-	for (int32_t i = 0; i < printLen; ++i)
+	for (int32_t i = 0, pi = 0; i < printLen; ++i, ++pi)
 	{
 		char c = text[i];
 		if (c == '\n')
@@ -82,12 +86,13 @@ static void local_add_to_book(struct PageBook* book, const char* text,
 				c = '\n';
 			}
 		}
-		if (i == bufferSize - 1 || currentRows == rows)
+		if (pi == bufferSize - 1 || currentRows == rows)
 		{
 			local_add_page_to_book(book, rows * cols);
 			currentRows = 0;
 			if (c != '\n')
 				nextSpace = stridxof(text, " \0", i + 1);
+			pi = 0;
 		}
 		else
 			book->tail->buffer[book->writeIndex++] = c;
@@ -97,16 +102,54 @@ static void local_add_to_book(struct PageBook* book, const char* text,
 
 static void local_reset_book(struct PageBook* book, const int32_t pageSize)
 {
+	local_clear_book(book);
 	book->pages = 1;
-	book->head = malloc(sizeof(struct PageBuffer));
-	book->head->next = NULL;
-	book->head->prev = NULL;
-	book->tail = book->head;
-	book->currentPage = book->tail;
 	book->currentPageIndex = 1;
+	book->writeIndex = 0;
+	book->head = calloc(1, sizeof(struct PageBuffer));
 	book->head->buffer = malloc(pageSize);
 	book->head->buffer[0] = '\0';
-	book->writeIndex = 0;
+	book->tail = book->head;
+	book->currentPage = book->tail;
+}
+
+/************************************************************************/
+/************************************************************************/
+/* Book tests                                                           */
+/************************************************************************/
+/************************************************************************/
+static void local_test_book()
+{
+	const int32_t rows = 50;
+	const int32_t cols = 100;
+	const int32_t size = rows * cols;
+	struct PageBook* book = calloc(1, sizeof(struct PageBook));
+	local_reset_book(book, size);
+	assert(book->head != NULL);
+	assert(book->tail == book->head);
+	assert(book->currentPage == book->head);
+	assert(book->currentPageIndex == 1);
+	assert(book->writeIndex == 0);
+	assert(book->head->next == NULL);
+	char msg[] = "This is a test";
+	local_add_to_book(book, msg, rows, cols);
+	assert(book->writeIndex == sizeof(msg) - 1);
+	assert(strcmp(book->currentPage->buffer, msg) == 0);
+	assert(book->currentPage == book->currentPage);
+	assert(book->tail == book->currentPage);
+	assert(book->currentPage->next == NULL);
+	assert(book->currentPage->prev == NULL);
+	local_add_to_book(book, msg, rows, cols);
+	assert(book->writeIndex == (sizeof(msg) - 1) * 2);
+	assert(strcmp(book->currentPage->buffer, "This is a testThis is a test\0") == 0);
+	local_reset_book(book, size);
+	assert(book->writeIndex == 0);
+	assert(book->currentPage == book->head);
+	assert(book->currentPage == book->tail);
+	assert(book->currentPage->next == NULL);
+	assert(book->currentPage->prev == NULL);
+	local_clear_book(book);
+	free(book);
 }
 
 /************************************************************************/
@@ -126,8 +169,10 @@ static void local_clear_page_space(const struct ClientUI* ui);
 
 struct ClientUI* UI_new()
 {
+	local_test_book();
 	struct ClientUI* ui = calloc(1, sizeof(struct ClientUI));
-	ui->book = malloc(sizeof(struct PageBook));
+	ui->book = calloc(1, sizeof(struct PageBook));
+	local_clear_book(ui->book);
 	return ui;
 }
 
@@ -196,7 +241,6 @@ void UI_page_prev(struct ClientUI* ui)
 
 void UI_clear_and_print(struct ClientUI* ui, const char* text)
 {
-	local_clear_book(ui->book);
 	clear();
 	move(0, 0);
 	local_reset_book(ui->book, ui->rows * ui->cols);

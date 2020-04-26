@@ -88,10 +88,9 @@ static void local_process_remote_message(struct lttp* lttp, struct NetHandle* cl
 
 struct lttp* lttp_new()
 {
-	struct lttp* lttp = malloc(sizeof(struct lttp));
+	struct lttp* lttp = calloc(1, sizeof(struct lttp));
 	if (lttp == NULL)
 		return NULL;
-	memset(lttp, 0, sizeof(struct lttp));
 	lttp->port = LTTP_DEFAULT_PORT;
 	return lttp;
 }
