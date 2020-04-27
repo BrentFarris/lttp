@@ -195,22 +195,16 @@ void Display_delete_line()
 #ifdef NCURSES
 	deleteln();
 #else
-	COORD line;
+	int x, y;
 	int rows, cols;
-	Display_get_yx(&line.Y, &line.X);
+	Display_get_yx(&y, &x);
 	Display_get_rows_cols(&rows, &cols);
-	line.X = 0;
-	line.Y += 1;
-	const DWORD txtLen = cols * (rows - line.Y);
-	DWORD readLen = 0;
-	wchar_t* scrTxt = malloc(sizeof(wchar_t) * txtLen);
-	ReadConsoleOutputCharacter(cmdwin(), scrTxt, txtLen, line, &readLen);
-	Display_move(line.Y - 1, 0);
-	WriteConsole(cmdwin(), scrTxt, readLen, NULL, NULL);
-
-	// TODO:  Will need to clear the bottom line as it will not move
-
-	free(scrTxt);
+	x = 0;
+	y += 1;
+	SMALL_RECT from = { .Left = x, .Top = y, .Right = cols, .Bottom = rows - y };
+	COORD dest = { .X = 0, .Y = y - 1 };
+	CHAR_INFO info = { .Char = L' ', .Attributes = 0 };
+	ScrollConsoleScreenBuffer(cmdwin(), &from, NULL, dest, &info);
 #endif
 }
 
