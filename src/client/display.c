@@ -173,20 +173,15 @@ void Display_insert_line()
 #ifdef NCURSES
 	insertln();
 #else
-	COORD line;
+	int x, y;
 	int rows, cols;
-	Display_get_yx(&line.Y, &line.X);
+	Display_get_yx(&y, &x);
 	Display_get_rows_cols(&rows, &cols);
-	line.X = 0;
-	const DWORD txtLen = cols * (rows - line.Y);
-	DWORD readLen = 0;
-	wchar_t* scrTxt = malloc(sizeof(wchar_t) * txtLen);
-	ReadConsoleOutputCharacter(cmdwin(), scrTxt, txtLen, line, &readLen);
-	Display_clear_to_line_end();
-	line.Y += 1;
-	Display_move(line.Y, line.X);
-	WriteConsole(cmdwin(), scrTxt, readLen, NULL, NULL);
-	free(scrTxt);
+	x = 0;
+	SMALL_RECT from = { .Left = x, .Top = y, .Right = cols, .Bottom = rows - y - 1 };
+	COORD dest = { .X = 0, .Y = y + 1 };
+	CHAR_INFO info = { .Char = L' ', .Attributes = 0 };
+	ScrollConsoleScreenBuffer(cmdwin(), &from, NULL, dest, &info);
 #endif
 }
 
