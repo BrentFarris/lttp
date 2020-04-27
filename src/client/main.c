@@ -29,37 +29,46 @@ static int local_text_handler(struct lttp* lttp, struct NetHandle* client, void*
 
 int main(int argc, char** argv)
 {
+	int err = 0;
 	signal(SIGINT, local_interrupt_handler);
+	s_active = true;
 
 	Display_init();
 	Display_move(0, 0);
-	
-	Display_print_str("%s", "Loading...");
-
-	struct lttp* lttp = lttp_new();
-	// TODO:  Assuming only argument is the host address, this will change with command line options being added
-	int err = 0;
-	if (argc < 2)
-		err = lttp_connect(lttp, LOCAL_HOST);
-	else
-		err = lttp_connect(lttp, argv[1]);
-
-	if (err)
-	{
-		Display_quit();
-		exit(1);
-	}
 
 	struct InputState state;
 	state.command = TextInput_new(INPUT_BUFFER_SIZE);
 	state.ui = UI_new();
 	UI_input_area_adjusted(state.ui, 1);
-
+	struct lttp* lttp = lttp_new();
 	lttp_set_text_handler(lttp, &state, local_text_handler);
 	lttp_set_form_handler(lttp, &state, Forms_handler);
 
+	UI_clear_and_print(state.ui, "Welcome to the official LTTP client. Start by typing in the server name/address you wish to connect to.");
 	UI_print_command_prompt(state.ui, state.command, ">\0", " \0");
-	s_active = true;
+	while (s_active)
+	{
+		if (TextInput_read(&state) && TextInput_get_len(state.command) > 0)
+		{
+			err = lttp_connect(lttp, TextInput_get_buffer(state.command));
+			TextInput_clear(state.command);
+			if (err)
+			{
+				UI_clear_and_print(state.ui, "Failed to connect to specified host, please try again.");
+				UI_print_command_prompt(state.ui, state.command, ">\0", " \0");
+			}
+			else
+			{
+				UI_clear_and_print(state.ui, "Loading...");
+				UI_print_command_prompt(state.ui, state.command, ">\0", " \0");
+				break;
+			}
+		}
+	}
+
+	if (err)
+		s_active = false;
+
 	while (s_active)
 	{
 		if (TextInput_read(&state) && TextInput_get_len(state.command) > 0)
@@ -86,5 +95,5 @@ int main(int argc, char** argv)
 	lttp_shutdown(lttp);
 	lttp_free(lttp);
 	Display_quit();
-	return 0;
+	return err;
 }

@@ -301,6 +301,8 @@ struct NetHandle* Network_new_client(const char* hostAddress, const uint16_t por
 		if (!validsocket(handle->socket))
 			break;
 
+		// TODO:  Cross-platform shorter socket timeout. Possibly select/poll
+		//			also this should help with ctrl+c getting caught up
 		if (connect(handle->socket, ptr->ai_addr, (int)ptr->ai_addrlen) != NO_SOCKET_ERROR)
 			continue;
 		else
