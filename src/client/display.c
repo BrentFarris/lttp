@@ -61,13 +61,10 @@ void Display_clear()
 	clear();
 #else
 	int rows, cols;
-	Display_move(0, 0);
 	Display_get_rows_cols(&rows, &cols);
-	int len = rows * cols;
-	char16_t* blank = malloc(sizeof(char16_t) * len);
-	for (int i = 0; i < len; ++i)
-		blank[i] = L' ';
-	WriteConsole(cmdwin(), blank, len, NULL, NULL);
+	DWORD c;
+	rows++;
+	FillConsoleOutputCharacter(cmdwin(), L' ', rows * cols, (COORD) { .X = 0, .Y = 0 }, &c);
 #endif
 }
 
