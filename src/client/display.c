@@ -15,6 +15,36 @@ void Display_init()
 	halfdelay(10);	/* 1 second */
 	noecho();
 	keypad(stdscr, TRUE);
+#else
+	/*--- Set the minimum buffer size --------------------------------------*/
+	HANDLE win = cmdwin();
+	SMALL_RECT r;
+	r.Left = 0;
+	r.Right = max(120, GetSystemMetrics(SM_CXMIN));
+	r.Top = 0;
+	r.Bottom = max(30, GetSystemMetrics(SM_CYMIN));
+	COORD xy;
+	xy.X = r.Right - r.Left;
+	xy.Y = r.Bottom - r.Top;
+	SetConsoleScreenBufferSize(win, xy);
+
+	/*--- Get the window border size ---------------------------------------*/
+	HWND window = GetConsoleWindow();
+	RECT rc, rw;
+	POINT ptDiff;
+	GetClientRect(window, &rc);
+	GetWindowRect(window, &rw);
+	int winX = (rw.right - rw.left) - rc.right;
+	int winY = (rw.bottom - rw.top) - rc.bottom;
+
+	/*--- Get the font size ------------------------------------------------*/
+	CONSOLE_FONT_INFO info;
+	GetCurrentConsoleFont(win, FALSE, &info);
+	COORD fontSize = GetConsoleFontSize(win, info.nFont);
+	int w = xy.X * fontSize.X;
+	int h = xy.Y * fontSize.Y;
+
+	MoveWindow(window, rw.left, rw.top, w + winX, h + winY, TRUE);
 #endif
 }
 
