@@ -1,4 +1,9 @@
+#if defined(_WIN32) || defined(_WIN64)
+#define _CRT_SECURE_NO_DEPRECATE
+#endif
+
 #include "input.h"
+#include <wchar.h>
 #include <stdlib.h>
 #include <memory.h>
 #include <string.h>
@@ -204,4 +209,52 @@ int32_t stridxof(const char* haystack, const char* needle, const int32_t offset)
 		return h - 1;
 
 	return -1;
+}
+
+size_t u8strlen(const char* str)
+{
+	size_t len = 0;
+	unsigned char c = str[0];
+	for (size_t i = 1; c != 0; len++)
+	{
+		if (c <= 127) i += 1;
+		else if ((c & 0xE0) == 0xC0) i += 1;
+		else if ((c & 0xF0) == 0xE0) i += 2;
+		else if ((c & 0xF8) == 0xF0) i += 3;
+		else	// Invalid string
+		{
+			len = 0;
+			break;
+		}
+		c = str[i];
+	}
+	return len;
+}
+
+
+size_t strlen16(const char16_t* str)
+{
+	if (str == NULL) return 0;
+	char16_t* s = (char16_t*)str;
+	for (; *s; ++s);
+	return s - str;
+}
+
+void str16_to_utf8(const char16_t* str, char** outStr)
+{
+	mbstate_t state;
+	memset(&state, 0, sizeof state);
+	const wchar_t* wStr = (wchar_t*)str;
+	size_t len = 1 + wcsrtombs(NULL, &wStr, 0, &state);
+	*outStr = malloc(len + 1);
+	wcsrtombs(*outStr, &wStr, len, &state);
+}
+
+void utf8_to_str16(const char* str, char16_t** outStr)
+{
+	size_t len = mbstowcs(NULL, str, 0);
+	wchar_t* wStr = malloc((len + 1) * sizeof(wchar_t));
+	mbstowcs(wStr, str, len);
+	*(wStr + len) = '\0';
+	*outStr = (char16_t*)wStr;
 }

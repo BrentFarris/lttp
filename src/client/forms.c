@@ -2,7 +2,7 @@
 #include "forms.h"
 #include "input.h"
 #include <memory.h>
-#include <ncurses.h>
+#include "display.h"
 
 int Forms_handler(struct lttp* lttp, struct NetHandle* client, void* state, struct lttpForm* form)
 {
@@ -11,8 +11,8 @@ int Forms_handler(struct lttp* lttp, struct NetHandle* client, void* state, stru
 	struct TextInput** buffs = malloc(sizeof(struct TextInput*) * count);
 	int32_t* types = malloc(sizeof(int32_t) * count);
 	int32_t buffSize = 0;
-	clear();
-	move(0, 0);
+	Display_clear();
+	Display_move(0, 0);
 
 	UI_clear_and_print(s->ui, "The server has sent a form for you to fill out.\n\0");
 	for (int32_t i = 0; i < count; ++i)
@@ -25,7 +25,7 @@ int Forms_handler(struct lttp* lttp, struct NetHandle* client, void* state, stru
 			UI_print_wrap(s->ui, " (yes/no)\0");
 		UI_print_wrap(s->ui, "?\0");
 		UI_print_command_prompt(s->ui, s->command, ">\0", " \0");
-		refresh();
+		Display_refresh();
 		struct InputState r;
 		r.command = buffs[i];
 		r.ui = s->ui;

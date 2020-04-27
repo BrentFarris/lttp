@@ -30,6 +30,7 @@ OBJS	= $(SRC_CLIENT:.c=.o)
 # Library compilation
 $(SONAME): $(OBJS) $(SRC_CLIENT)
 	$(CC) -g $(OBJS) $(INCLUDES) $(LIBS) -o $(SONAME)
+	rm -f $(OBJS) *~
 
 # Cleaning rule
 clean:

@@ -2,7 +2,7 @@
 #include "input.h"
 #include <string.h>
 #include <assert.h>
-#include <ncurses.h>
+#include "display.h"
 
 /************************************************************************/
 /************************************************************************/
@@ -41,11 +41,11 @@ static void local_clear_book(struct PageBook* book)
 
 static void local_print_page(struct PageBuffer* page)
 {
-	volatile int fromX, fromY;
-	getyx(stdscr, fromY, fromX);
-	move(0, 0);
-	printw("%s", page->buffer);
-	move(fromY, fromX);
+	int fromX, fromY;
+	Display_get_yx(&fromY, &fromX);
+	Display_move(0, 0);
+	Display_print_str("%s", page->buffer);
+	Display_move(fromY, fromX);
 }
 
 static void local_add_page_to_book(struct PageBook* book, const int32_t size)
@@ -185,26 +185,26 @@ void UI_free(struct ClientUI* ui)
 
 void UI_print_wrap(struct ClientUI* ui, const char* text)
 {
-	volatile int fromX, fromY;
-	getyx(stdscr, fromY, fromX);
+	int fromX, fromY;
+	Display_get_yx(&fromY, &fromX);
 	local_add_to_book(ui->book, text, ui->rows, ui->cols);
 	local_print_page(ui->book->currentPage);
 	local_print_info_bar(ui);
-	move(fromY, fromX);
+	Display_move(fromY, fromX);
 }
 
 void UI_print_command_prompt(struct ClientUI* ui, struct TextInput* command, const char* prefix, const char* separator)
 {
 	int rows, cols;
-	getmaxyx(stdscr, rows, cols);
+	Display_get_rows_cols(&rows, &cols);
 	for (int32_t i = ui->rows + 1; i < rows; ++i)
 	{
-		move(ui->rows + 1, 0);
-		clrtoeol();
+		Display_move(ui->rows + 1, 0);
+		Display_clear_to_line_end();
 	}
-	move(ui->rows + 1, 0);
-	printw("%s%s%s", prefix, separator, TextInput_get_buffer(command));
-	refresh();
+	Display_move(ui->rows + 1, 0);
+	Display_print_str("%s%s%s", prefix, separator, TextInput_get_buffer(command));
+	Display_refresh();
 }
 
 void UI_page_next(struct ClientUI* ui)
@@ -213,14 +213,14 @@ void UI_page_next(struct ClientUI* ui)
 	if (ui->book->currentPage->next == NULL)
 		return;
 	int fromX, fromY;
-	getyx(stdscr, fromY, fromX);
+	Display_get_yx(&fromY, &fromX);
 	local_clear_page_space(ui);
 	ui->book->currentPage = ui->book->currentPage->next;
 	ui->book->currentPageIndex++;
 	local_print_page(ui->book->currentPage);
 	local_print_info_bar(ui);
-	move(fromY, fromX);
-	refresh();
+	Display_move(fromY, fromX);
+	Display_refresh();
 }
 
 void UI_page_prev(struct ClientUI* ui)
@@ -229,20 +229,20 @@ void UI_page_prev(struct ClientUI* ui)
 	if (ui->book->currentPage->prev == NULL)
 		return;
 	int fromX, fromY;
-	getyx(stdscr, fromY, fromX);
+	Display_get_yx(&fromY, &fromX);
 	local_clear_page_space(ui);
 	ui->book->currentPage = ui->book->currentPage->prev;
 	ui->book->currentPageIndex--;
 	local_print_page(ui->book->currentPage);
 	local_print_info_bar(ui);
-	move(fromY, fromX);
-	refresh();
+	Display_move(fromY, fromX);
+	Display_refresh();
 }
 
 void UI_clear_and_print(struct ClientUI* ui, const char* text)
 {
-	clear();
-	move(0, 0);
+	Display_clear();
+	Display_move(0, 0);
 	local_reset_book(ui->book, ui->rows * ui->cols);
 	UI_print_wrap(ui, text);
 }
@@ -250,8 +250,8 @@ void UI_clear_and_print(struct ClientUI* ui, const char* text)
 void UI_input_area_adjusted(struct ClientUI* ui, const size_t inputRows)
 {
 	int rows, cols;
-	getmaxyx(stdscr, rows, cols);
-	ui->rows = rows - inputRows - 1;	/* -1 for information row */
+	Display_get_rows_cols(&rows, &cols);
+	ui->rows = (int32_t)(rows - inputRows - 1);	/* -1 for information row */
 	ui->cols = cols;
 
 	// TODO:  Re-adjust pages count if needed
@@ -260,22 +260,22 @@ void UI_input_area_adjusted(struct ClientUI* ui, const size_t inputRows)
 
 static void local_print_info_bar(const struct ClientUI* ui)
 {
-	volatile int fromX, fromY;
-	getyx(stdscr, fromY, fromX);
-	move(ui->rows, 0);
-	clrtoeol();
+	int fromX, fromY;
+	Display_get_yx(&fromY, &fromX);
+	Display_move(ui->rows, 0);
+	Display_clear_to_line_end();
 	for (int32_t i = 0; i < ui->cols; ++i)
-		addch('=');
-	move(ui->rows, 3);
-	printw(" Page %d of %d (page up/down = navigate) ", ui->book->currentPageIndex, ui->book->pages);
-	move(fromY, fromX);
+		Display_add_char('=');
+	Display_move(ui->rows, 3);
+	Display_print_str(" Page %d of %d (page up/down = navigate) ", ui->book->currentPageIndex, ui->book->pages);
+	Display_move(fromY, fromX);
 }
 
 static void local_clear_page_space(const struct ClientUI* ui)
 {
 	for (int32_t i = 0; i < ui->rows; ++i)
 	{
-		move(i, 0);
-		clrtoeol();
+		Display_move(i, 0);
+		Display_clear_to_line_end();
 	}
 }

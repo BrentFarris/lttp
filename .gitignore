@@ -77,3 +77,5 @@ src/lttp
 [Oo]bj/
 .vs
 lttp
+lttp-win/x64
+lttp-win/x86

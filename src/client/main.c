@@ -1,14 +1,16 @@
 #include "ui.h"
-#include "../net.h"
 #include <stdio.h>
 #include "input.h"
 #include "forms.h"
 #include <string.h>
+#include "../net.h"
 #include <stdbool.h>
+#include "display.h"
 #include "../lttp.h"
-#include <ncurses.h>
 #include "text_input.h"
 #include "../lttp_form.h"
+
+#include <windows.h>
 
 #define INPUT_BUFFER_SIZE	65556
 
@@ -22,12 +24,10 @@ static int local_text_handler(struct lttp* lttp, struct NetHandle* client, void*
 
 int main(int argc, char** argv)
 {
-	initscr();
-	halfdelay(10);	/* 1 second */
-	noecho();
-	keypad(stdscr, TRUE);
-	move(0, 0);
-	printw("Loading...\0");
+	Display_init();
+	Display_move(0, 0);
+	
+	Display_print_str("Loading...");
 
 	struct lttp* lttp = lttp_new();
 	// TODO:  Assuming only argument is the host address, this will change with command line options being added
@@ -39,7 +39,7 @@ int main(int argc, char** argv)
 
 	if (err)
 	{
-		endwin();
+		Display_quit();
 		exit(1);
 	}
 
@@ -68,11 +68,11 @@ int main(int argc, char** argv)
 		{
 			lttp_update(lttp);
 		} while (lttp_is_waiting(lttp));
-		refresh();
+		Display_refresh();
 	}
 
 	lttp_shutdown(lttp);
 	lttp_free(lttp);
-	endwin();
+	Display_quit();
 	return 0;
 }

@@ -1,7 +1,7 @@
 #include "ui.h"
 #include <string.h>
 #include <memory.h>
-#include <ncurses.h>
+#include "display.h"
 #include "text_input.h"
 
 struct TextInput {
@@ -31,123 +31,121 @@ void TextInput_free(struct TextInput* input)
 bool TextInput_read(struct InputState* state)
 {
 	struct TextInput* input = state->command;
-	int c = getch();
+	int c = Display_get_char();
 	if (c != ERR)
 	{
 		switch (c)
 		{
-			case 339:		/* page up */
+			case DKEY_PAGE_UP:
 				UI_page_prev(state->ui);
 				break;
-			case 338:		/* page down */
+			case DKEY_PAGE_DOWN:
 				UI_page_next(state->ui);
 				break;
-			case 525:		/* ctrl + down arrow */
-			case KEY_DOWN:
-				// down
+			case DKEY_CTRL_DOWN_ARROW:
+			case DKEY_DOWN_ARROW:
 				break;
-			case 566:		/* ctrl + up arrow */
-			case KEY_UP:
-				// up
+			case DKEY_CTRL_UP_ARROW:
+			case DKEY_UP_ARROW:
 				break;
-			case 545:		/* ctrl + left arrow */
+			case DKEY_CTRL_LEFT_ARROW:
 				if (input->writeIndex > 0)
 				{
-					for (int32_t i = input->writeIndex - 1; i >= 0; --i)
+					for (size_t i = input->writeIndex - 1; i >= 0; --i)
 					{
 						if (i == 0 || input->buffer[i - 1] == ' ')
 						{
-							volatile int x, y, rows, cols;
-							getyx(stdscr, y, x);
-							getmaxyx(stdscr, rows, cols);
-							x -= input->writeIndex - i;
+							int x, y, rows, cols;
+							Display_get_yx(&y, &x);
+							Display_get_rows_cols(&rows, &cols);
+							x -= (int)(input->writeIndex - i);
 							while (x < 0)
 							{
 								x += cols - 1;
 								y--;
 							}
-							move(y, x % cols);
+							Display_move(y, x % cols);
 							input->writeIndex = i;
 							break;
 						}
 					}
 				}
 				break;
-			case KEY_LEFT:
+			case DKEY_LEFT_ARROW:
 				if (input->writeIndex > 0)
 				{
-					volatile int x, y, rows, cols;
-					getyx(stdscr, y, x);
-					getmaxyx(stdscr, rows, cols);
+					int x, y, rows, cols;
+					Display_get_yx(&y, &x);
+					Display_get_rows_cols(&rows, &cols);
 
 					input->writeIndex--;
 					if (x == 0)
-						move(y - 1, cols - 1);
+						Display_move(y - 1, cols - 1);
 					else
-						move(y, x - 1);
+						Display_move(y, x - 1);
 				}
 				break;
-			case 560:		/* ctrl + right arrow */
+			case DKEY_CTRL_RIGHT_ARROW:
 				if (input->writeIndex < input->endIndex)
 				{
 					for (size_t i = input->writeIndex + 1; i <= input->endIndex; ++i)
 					{
 						if (i == input->endIndex || input->buffer[i - 1] == ' ')
 						{
-							volatile int x, y, rows, cols;
-							getyx(stdscr, y, x);
-							getmaxyx(stdscr, rows, cols);
-							x += i - input->writeIndex;
+							int x, y, rows, cols;
+							Display_get_yx(&y, &x);
+							Display_get_rows_cols(&rows, &cols);
+							x += (int)(i - input->writeIndex);
 							while (x > cols)
 							{
 								x -= cols - 1;
 								y++;
 							}
-							move(y, x);
+							Display_move(y, x);
 							input->writeIndex = i;
 							break;
 						}
 					}
 				}
 				break;
-			case KEY_RIGHT:
+			case DKEY_RIGHT_ARROW:
 				if (input->writeIndex < input->endIndex)
 				{
-					volatile int x, y, rows, cols;
-					getyx(stdscr, y, x);
-					getmaxyx(stdscr, rows, cols);
+					int x, y, rows, cols;
+					Display_get_yx(&y, &x);
+					Display_get_rows_cols(&rows, &cols);
 
 					input->writeIndex++;
 					if (x == cols - 1)
-						move(y + 1, 0);
+						Display_move(y + 1, 0);
 					else
-						move(y, x + 1);
+						Display_move(y, x + 1);
 				}
 				break;
-			case 10:	/* return key */
+			case DKEY_RETURN:
 				input->buffer[input->endIndex] = '\0';
 				input->endIndex = 0;
 				input->writeIndex = 0;
 				trim(input->buffer);
 				return true;
-			case 8:		/* ctrl + delete */
-			case KEY_BACKSPACE:
+			case DKEY_DELETE:
+			case DKEY_BACKSPACE:
 				if (input->writeIndex > 0)
 				{
-					volatile int x, y;
-					getyx(stdscr, y, x);
+					int x, y;
+					Display_get_yx(&y, &x);
 					if (x > 0)
-						mvdelch(y, x - 1);
+						Display_delete_char_at(y, x - 1);
 					else
 					{
-						volatile int rows, cols;
-						getmaxyx(stdscr, rows, cols);
-						mvdelch(y - 1, cols - 2);
+						int rows, cols;
+						Display_get_rows_cols(&rows, &cols);
+						Display_delete_char_at(y - 1, cols - 2);
 
-						move(y - (input->lines + 1), 0);
+						Display_move(y - (input->lines + 1), 0);
 						input->lines--;
-						insertln();
-						move(rows - 1, cols - 2);
+						Display_insert_line();
+						Display_move(rows - 1, cols - 2);
 					}
 					if (input->endIndex > 0)
 					{
@@ -166,26 +164,26 @@ bool TextInput_read(struct InputState* state)
 						memcpy(input->buffer + input->writeIndex + 1, input->buffer + input->writeIndex, ewDiff);
 					input->buffer[input->writeIndex] = c;
 					input->buffer[++input->endIndex] = '\0';
-					printw("%s", input->buffer + input->writeIndex);
+					Display_print_str("%s", input->buffer + input->writeIndex);
 					input->writeIndex++;
 
-					volatile int x, y, rows, cols;
-					getyx(stdscr, y, x);
-					getmaxyx(stdscr, rows, cols);
+					int x, y, rows, cols;
+					Display_get_yx(&y, &x);
+					Display_get_rows_cols(&rows, &cols);
 					if (ewDiff > 0)
-						move(y - (ewDiff / cols), x - (ewDiff % cols));
+						Display_move(y - ((int)ewDiff / cols), x - ((int)ewDiff % cols));
 					
 					if (y == rows - 1 && x == cols - 1)
 					{
 						input->lines++;
-						move(rows - (input->lines + 2), 0);
-						deleteln();
-						move(rows - 1, 0);
+						Display_move(rows - (input->lines + 2), 0);
+						Display_delete_line();
+						Display_move(rows - 1, 0);
 					}
 				}
 				break;
 		}
-		refresh();
+		Display_refresh();
 	}
 	return false;
 }

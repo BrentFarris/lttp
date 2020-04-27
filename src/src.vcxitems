@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{ad032836-7ed3-418e-8eee-2d47131b2185}</ItemsProjectGuid>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)client\display.c" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)client\forms.c" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)client\input.c" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)client\main.c" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)client\text_input.c" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)client\ui.c" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)lttp.c" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)lttp_form.c" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)net.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)client\display.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)client\forms.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)client\input.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)client\text_input.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)client\ui.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)lttp.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)lttp_form.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)net.h" />
+  </ItemGroup>
+</Project>
