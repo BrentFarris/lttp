@@ -145,11 +145,8 @@ void Display_clear_to_line_end()
 	int len = (cols - x) + 1;
 	if (len == 0)
 		return;
-	char16_t* str = malloc(sizeof(char16_t) * len);
-	for (int i = 0; i < len; ++i)
-		str[i] = L' ';
-	WriteConsole(cmdwin(), str, len, NULL, NULL);
-	free(str);
+	DWORD c;
+	FillConsoleOutputCharacter(cmdwin(), L' ', len, (COORD) { .X = x, .Y = y }, &c);
 	Display_move(y, x);
 #endif
 }
