@@ -10,8 +10,6 @@
 #include "text_input.h"
 #include "../lttp_form.h"
 
-#include <windows.h>
-
 #define INPUT_BUFFER_SIZE	65556
 
 static int local_text_handler(struct lttp* lttp, struct NetHandle* client, void* state, const char* msg)
@@ -27,7 +25,7 @@ int main(int argc, char** argv)
 	Display_init();
 	Display_move(0, 0);
 	
-	Display_print_str("Loading...");
+	Display_print_str("%s", "Loading...");
 
 	struct lttp* lttp = lttp_new();
 	// TODO:  Assuming only argument is the host address, this will change with command line options being added

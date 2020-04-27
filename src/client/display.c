@@ -15,8 +15,6 @@ void Display_init()
 	halfdelay(10);	/* 1 second */
 	noecho();
 	keypad(stdscr, TRUE);
-#else
-
 #endif
 }
 
@@ -105,7 +103,7 @@ void Display_get_rows_cols(int* outRows, int* outCols)
 	CONSOLE_SCREEN_BUFFER_INFO info;
 	GetConsoleScreenBufferInfo(cmdwin(), &info);
 	*outCols = info.srWindow.Right - info.srWindow.Left;
-	*outRows = info.srWindow.Bottom - info.srWindow.Top;
+	*outRows = info.srWindow.Bottom - info.srWindow.Top + 1;
 #endif
 }
 
@@ -132,7 +130,7 @@ void Display_clear_to_line_end()
 void Display_add_char(uint16_t utf8Letter)
 {
 #ifdef NCURSES
-	addch(letter);
+	addch(utf8Letter);
 #else
 	wchar_t wLetter[1];
 	mbstowcs(wLetter, &utf8Letter, 1);
@@ -189,7 +187,7 @@ void Display_delete_line()
 void Display_delete_char()
 {
 #ifdef NCURSES
-	delch()
+	delch();
 #else
 	int x, y;
 	Display_get_yx(&y, &x);
@@ -198,7 +196,7 @@ void Display_delete_char()
 	// TODO:  Move the entire buffer over
 	int rows, cols;
 	Display_get_rows_cols(&rows, &cols);
-	const DWORD txtLen = cols * (rows - y);
+	const DWORD txtLen = (cols * (rows - y)) - x;
 	DWORD readLen = 0;
 	wchar_t* scrTxt = malloc(sizeof(wchar_t) * txtLen);
 	COORD xy;

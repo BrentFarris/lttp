@@ -55,8 +55,7 @@ void Display_delete_char();
 void Display_delete_char_at(const int y, const int x);
 
 #ifdef NCURSES
-#define Display_print_str(format, ...)	\
-	printw(format, __VA_ARGS__);
+#define Display_print_str(format, ...) printw((format), __VA_ARGS__)
 #else
 void Display_print_str(const char* format, ...);
 #endif

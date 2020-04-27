@@ -51,7 +51,7 @@ bool TextInput_read(struct InputState* state)
 			case DKEY_CTRL_LEFT_ARROW:
 				if (input->writeIndex > 0)
 				{
-					for (size_t i = input->writeIndex - 1; i >= 0; --i)
+					for (int32_t i = (int32_t)input->writeIndex - 1; i >= 0; --i)
 					{
 						if (i == 0 || input->buffer[i - 1] == ' ')
 						{

@@ -231,7 +231,6 @@ size_t u8strlen(const char* str)
 	return len;
 }
 
-
 size_t strlen16(const char16_t* str)
 {
 	if (str == NULL) return 0;
