@@ -3,6 +3,7 @@
 
 #if !defined(_WIN32) && !defined(_WIN64)
 #include <ncurses.h>
+//http://tldp.org/HOWTO/NCURSES-Programming-HOWTO/
 #define NCURSES
 #define DKEY_PAGE_UP			339
 #define DKEY_PAGE_DOWN			338
