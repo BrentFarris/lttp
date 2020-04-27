@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "input.h"
 #include "forms.h"
+#include <signal.h>
 #include <string.h>
 #include "../net.h"
 #include <stdbool.h>
@@ -11,6 +12,12 @@
 #include "../lttp_form.h"
 
 #define INPUT_BUFFER_SIZE	65556
+static volatile bool s_active = 1;
+
+static int local_interrupt_handler(int sig)
+{
+	s_active = false;
+}
 
 static int local_text_handler(struct lttp* lttp, struct NetHandle* client, void* state, const char* msg)
 {
@@ -22,6 +29,8 @@ static int local_text_handler(struct lttp* lttp, struct NetHandle* client, void*
 
 int main(int argc, char** argv)
 {
+	signal(SIGINT, local_interrupt_handler);
+
 	Display_init();
 	Display_move(0, 0);
 	
@@ -50,7 +59,8 @@ int main(int argc, char** argv)
 	lttp_set_form_handler(lttp, &state, Forms_handler);
 
 	UI_print_command_prompt(state.ui, state.command, ">\0", " \0");
-	while (true)
+	s_active = true;
+	while (s_active)
 	{
 		if (TextInput_read(&state) && TextInput_get_len(state.command) > 0)
 		{
@@ -69,6 +79,10 @@ int main(int argc, char** argv)
 		Display_refresh();
 	}
 
+	Display_clear();
+	Display_print_str("%s", "Cancel has been invoked! Closing connection with server...");
+	UI_free(state.ui);
+	TextInput_free(state.command);
 	lttp_shutdown(lttp);
 	lttp_free(lttp);
 	Display_quit();
